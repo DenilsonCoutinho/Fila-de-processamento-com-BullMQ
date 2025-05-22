@@ -1,0 +1,33 @@
+# Diretório onde ficam os módulos instalados via npm/yarn
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Diretórios do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de ambiente, que contêm variáveis sensíveis (senha, token, etc)
+.env
+.env.local
+.env.*.local
+
+# Build output (caso use build, como Babel, TypeScript, etc)
+dist/
+build/
+
+# Cache de depedências do VSCode
+.vscode/
+
+# Pastas temporárias
+tmp/
+temp/
+
+# Arquivos de lock de pacote (se você quiser ignorar, mas normalmente não se ignora)
+# package-lock.json
+# yarn.lock

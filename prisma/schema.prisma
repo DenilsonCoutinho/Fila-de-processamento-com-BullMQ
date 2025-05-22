@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum typetheology {
+  ARMINIANA
+  REFORMADA
+  PENTECOSTAL
+  BATISTA
+}
+
+enum typetranslations {
+  ACF
+  NTLH
+  NVI
+}
+
+enum PlanType {
+  Free
+  Premium
+  Pro
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  hasCompletedQuestionnaire Boolean @default(false)
+
+  stripeCustomerId          String?
+  stripeSubscriptionId      String?
+  stripeSubscriptionStatus  String?
+  stripePriceId             String?
+  stripeNamePlan            PlanType?
+  stripe_currency           String?
+  stripePricePlan           Int?
+  is_current_period_end     Boolean?
+  stripe_current_period_end Int?
+
+  accounts         Account[]
+  sessions         Session[]
+  Authenticator    Authenticator[]
+  typetheology     Typetheology[]
+  TypeTranslations TypeTranslations[]
+  sharedResponse   SharedResponse[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model Devotional {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String // só o conteúdo do devocional em HTML
+  date      DateTime @unique // data do devocional, único por dia
+  createdAt DateTime @default(now())
+}
+
+model SharedResponse {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  htmlContent  String? // Rendered content (HTML, e.g., from Draft.js)
+  teologia     String // Theological perspective for the response (e.g., "baptist", "calvinist")
+  status       String? // Theological perspective for the response (e.g., "baptist", "calvinist")
+  perguntaHash String   @unique // Hash of the question + theology (for caching purposes)
+  likes        Int?      @default(0) // Number of likes the response has received
+  dislikes     Int?      @default(0) // Number of dislikes the response has received
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Typetheology {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String       @db.ObjectId
+  type_theology typetheology
+}
+
+model TypeTranslations {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String           @db.ObjectId
+  type_translations typetranslations
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @id @map("_id")
+  userId               String  @db.ObjectId
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, credentialID])
+}
