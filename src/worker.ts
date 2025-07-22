@@ -1,6 +1,7 @@
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
-const { xai } = require('@ai-sdk/xai');
+// const { xai } = require('@ai-sdk/xai');
+import { xai } from '@ai-sdk/xai';
 
 import { generateText, streamText } from 'ai';
 import { prisma } from './prisma'; // adapte conforme seu path
@@ -11,15 +12,17 @@ import {
     systemPromptReformada,
 } from '../lib/prompts/prompt';
 
-const connection = new IORedis("rediss://default:AWxAAAIjcDFjZjZkMzUwZDNiZTc0OGJhYTBjMDNiN2YzZmUyNjQyZnAxMA@desired-rhino-27712.upstash.io:6379", {
+const connection = new IORedis(process.env.URL_CONECTION_REDIS as string, {
     maxRetriesPerRequest: null,
 });
 
 // Redis Pub para eventos SSE
-const pub = new IORedis("rediss://default:AWxAAAIjcDFjZjZkMzUwZDNiZTc0OGJhYTBjMDNiN2YzZmUyNjQyZnAxMA@desired-rhino-27712.upstash.io:6379", {
+const pub = new IORedis(process.env.URL_CONECTION_REDIS as string, {
     maxRetriesPerRequest: null
 });
-
+const del = new IORedis(process.env.URL_CONECTION_REDIS as string, {
+    maxRetriesPerRequest: null
+});
 const worker = new Worker(
     'ask-ai',
     async job => {
@@ -41,7 +44,7 @@ const worker = new Worker(
             prompt: messageUser,
             temperature: 0,
         });
-
+        console.log(stream.textStream)
         let fullResponse = ''
         for await (const delta of stream.textStream) {
             if (!delta) continue;
@@ -51,6 +54,7 @@ const worker = new Worker(
             // Envia cada pedaço para o cliente via Redis
             await pub.publish(`resposta:${perguntaHash}`, delta);
         }
+
         // Salva no banco
         await prisma.sharedResponse.update({
             where: { perguntaHash },
@@ -60,12 +64,7 @@ const worker = new Worker(
             },
         });
 
-        // Publica para o frontend via canal SSE
-        // await pub.publish(`resposta:${perguntaHash}`, JSON.stringify({
-        //     htmlContent: fullResponse,
-        //     teologia: type_theology,
-        //     perguntaHash,
-        // }));
+        await del.del(`lock:${perguntaHash}`);
     },
     { connection }
 );

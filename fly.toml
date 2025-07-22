@@ -8,13 +8,12 @@ primary_region = 'gig'
 
 [build]
 
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = 'stop'
-  auto_start_machines = true
-  min_machines_running = 0
-  processes = ['app']
+
+[experimental]
+  auto_stop_machines = "never"
+
+[processes]
+  worker = "ts-node src/worker.ts"
 
 [[vm]]
-  size = 'shared-cpu-1x'
+  size = 'shared-cpu-2x'
